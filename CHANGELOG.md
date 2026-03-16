@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/cwaits6/.github/compare/v1.2.0...v1.2.1) (2026-03-16)
+
+
+### Bug Fixes
+
+* **release:** use single Trivy step for SBOM dependency submission ([1e8b592](https://github.com/cwaits6/.github/commit/1e8b5920fa72c05beb9fd7ba43495c4fd0d38c2d))
+
 # [1.2.0](https://github.com/cwaits6/.github/compare/v1.1.2...v1.2.0) (2026-03-16)
 
 
