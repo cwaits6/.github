@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/cwaits6/.github/compare/v1.1.2...v1.2.0) (2026-03-16)
+
+
+### Features
+
+* add container image cleanup workflow for deleted branches ([1e1869c](https://github.com/cwaits6/.github/commit/1e1869c3e15699a9da93072989d5762ed8a7779a))
+
 ## [1.1.2](https://github.com/cwaits6/.github/compare/v1.1.1...v1.1.2) (2026-03-16)
 
 
