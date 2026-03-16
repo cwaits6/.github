@@ -206,3 +206,18 @@ jobs:
             ARCH="${PLATFORM##*/}"
             echo "Note: staging image ${STAGING_TAG}-${ARCH} can be cleaned up from the registry"
           done
+
+      - name: Sign container images with cosign
+        run: |
+          TAGS="${{ needs.prepare.outputs.tags }}"
+          for TAG in $TAGS; do
+            DIGEST=$(buildah manifest inspect "docker://${TAG}" | jq -r '.digest // empty' 2>/dev/null || true)
+            if [ -n "$DIGEST" ]; then
+              IMAGE="${TAG%%:*}@${DIGEST}"
+              echo "Signing ${IMAGE}..."
+              cosign sign --yes "${IMAGE}"
+            else
+              echo "Signing ${TAG}..."
+              cosign sign --yes "${TAG}"
+            fi
+          done
