@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: "Node.js version for semantic-release"
+        type: string
+        default: "24"
+      generate-sbom:
+        description: "Generate and submit SBOM"
+        type: boolean
+        default: true
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      - name: Generate SBOM (CycloneDX)
+        if: inputs.generate-sbom
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: cyclonedx
+          output: sbom.cdx.json
+
+      - name: Submit SBOM to dependency graph
+        if: inputs.generate-sbom
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          dependency-snapshot: true
+
+      - name: Install semantic-release
+        run: npm install -g semantic-release @semantic-release/commit-analyzer @semantic-release/release-notes-generator @semantic-release/changelog @semantic-release/git @semantic-release/github
+
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release
