@@ -60,11 +60,14 @@ jobs:
           TAGS=""
           SUFFIX="${{ inputs.tag-suffix }}"
 
-          # Tag with version if this is a tag push
+          # Determine tags based on trigger event
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            # Tag push or release event with a version tag
             VERSION="${GITHUB_REF#refs/tags/}"
-            TAGS="${FULL_IMAGE}:${VERSION}${SUFFIX}"
-            TAGS="${TAGS} ${FULL_IMAGE}:latest${SUFFIX}"
+            TAGS="${FULL_IMAGE}:${VERSION}${SUFFIX} ${FULL_IMAGE}:latest${SUFFIX}"
+          elif [[ "$GITHUB_REF" == refs/heads/* ]]; then
+            # Push to branch (e.g. main) — tag as latest
+            TAGS="${FULL_IMAGE}:latest${SUFFIX}"
           else
             SHA="${GITHUB_SHA::8}"
             TAGS="${FULL_IMAGE}:sha-${SHA}${SUFFIX}"
