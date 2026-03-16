@@ -1,3 +1,10 @@
+## [1.1.2](https://github.com/cwaits6/.github/compare/v1.1.1...v1.1.2) (2026-03-16)
+
+
+### Bug Fixes
+
+* **release:** disable go cache when go.sum missing ([2d3a59b](https://github.com/cwaits6/.github/commit/2d3a59bbda43924b91f5596e76c87c53782efada))
+
 ## [1.1.1](https://github.com/cwaits6/.github/compare/v1.1.0...v1.1.1) (2026-03-16)
 
 
