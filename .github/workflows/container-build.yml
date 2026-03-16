@@ -31,6 +31,10 @@ on:
         description: "Optional suffix appended to all tags"
         type: string
         default: ""
+      use-qemu:
+        description: "Use QEMU emulation instead of native ARM runners (for private repos)"
+        type: boolean
+        default: false
     secrets:
       REGISTRY_USERNAME:
         required: false
@@ -39,16 +43,42 @@ on:
         required: false
         description: "Registry password (defaults to GITHUB_TOKEN for GHCR)"
 
-permissions:
-  contents: read
-  packages: write
-
 jobs:
-  build:
-    name: Build & Push
+  prepare:
+    name: Prepare Build Matrix
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      image: ${{ steps.meta.outputs.image }}
+      tags: ${{ steps.meta.outputs.tags }}
+      staging-tag: ${{ steps.meta.outputs.staging-tag }}
     steps:
-      - uses: actions/checkout@v6
+      - name: Generate platform matrix
+        id: matrix
+        run: |
+          IFS=',' read -ra PLATFORMS <<< "${{ inputs.platforms }}"
+          MATRIX="["
+          FIRST=true
+          for PLATFORM in "${PLATFORMS[@]}"; do
+            PLATFORM=$(echo "$PLATFORM" | xargs)
+            ARCH="${PLATFORM##*/}"
+
+            # Select runner: native ARM runner unless use-qemu is enabled
+            if [ "${{ inputs.use-qemu }}" = "true" ] || [ "$ARCH" = "amd64" ]; then
+              RUNNER="ubuntu-latest"
+            else
+              RUNNER="ubuntu-24.04-arm"
+            fi
+
+            if [ "$FIRST" = true ]; then
+              FIRST=false
+            else
+              MATRIX="$MATRIX,"
+            fi
+            MATRIX="$MATRIX{\"platform\":\"$PLATFORM\",\"arch\":\"$ARCH\",\"runner\":\"$RUNNER\"}"
+          done
+          MATRIX="$MATRIX]"
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
 
       - name: Set image metadata
         id: meta
@@ -64,16 +94,42 @@ jobs:
           TAGS=""
           SUFFIX="${{ inputs.tag-suffix }}"
 
-          # Tag with version if this is a tag push
+          # Determine tags based on trigger event
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             VERSION="${GITHUB_REF#refs/tags/}"
-            TAGS="${FULL_IMAGE}:${VERSION}${SUFFIX}"
-            TAGS="${TAGS} ${FULL_IMAGE}:latest${SUFFIX}"
+            TAGS="${FULL_IMAGE}:${VERSION}${SUFFIX} ${FULL_IMAGE}:latest${SUFFIX}"
+          elif [[ "$GITHUB_REF" == refs/pull/* ]]; then
+            BRANCH="${GITHUB_HEAD_REF//\//-}"
+            TAGS="${FULL_IMAGE}:${BRANCH}${SUFFIX}"
+          elif [[ "$GITHUB_REF" == refs/heads/* ]]; then
+            BRANCH="${GITHUB_REF#refs/heads/}"
+            BRANCH="${BRANCH//\//-}"
+            TAGS="${FULL_IMAGE}:${BRANCH}${SUFFIX}"
           else
             SHA="${GITHUB_SHA::8}"
             TAGS="${FULL_IMAGE}:sha-${SHA}${SUFFIX}"
           fi
           echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
+
+          # Staging tag prefix for per-platform images
+          SHA="${GITHUB_SHA::8}"
+          echo "staging-tag=${FULL_IMAGE}:staging-${SHA}" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build (${{ matrix.arch }})
+    needs: prepare
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install QEMU for cross-platform emulation
+        if: inputs.use-qemu && matrix.arch != 'amd64'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq qemu-user-static
 
       - name: Login to registry
         run: |
@@ -83,48 +139,94 @@ jobs:
           if [ -z "$PASSWORD" ]; then PASSWORD="${{ secrets.GITHUB_TOKEN }}"; fi
           echo "$PASSWORD" | buildah login -u "$USERNAME" --password-stdin "${{ inputs.registry }}"
 
-      - name: Build and push (multi-arch)
+      - name: Build and push (${{ matrix.platform }})
         run: |
-          IFS=',' read -ra PLATFORMS <<< "${{ inputs.platforms }}"
-          MANIFEST="${{ steps.meta.outputs.image }}:manifest-$$"
+          STAGING_TAG="${{ needs.prepare.outputs.staging-tag }}-${{ matrix.arch }}"
 
-          # Build per-platform images
-          for PLATFORM in "${PLATFORMS[@]}"; do
-            PLATFORM=$(echo "$PLATFORM" | xargs)
-            OS="${PLATFORM%%/*}"
-            ARCH="${PLATFORM##*/}"
-            echo "Building for ${OS}/${ARCH}..."
+          BUILD_CMD="buildah build \
+            --platform ${{ matrix.platform }} \
+            --format oci \
+            -f ${{ inputs.dockerfile }} \
+            -t ${STAGING_TAG}"
 
-            BUILD_CMD="buildah build \
-              --platform ${PLATFORM} \
-              --format oci \
-              -f ${{ inputs.dockerfile }} \
-              -t ${MANIFEST}-${ARCH}"
+          # Add build args
+          BUILD_ARGS="${{ inputs.build-args }}"
+          if [ -n "$BUILD_ARGS" ]; then
+            while IFS= read -r arg; do
+              [ -n "$arg" ] && BUILD_CMD="$BUILD_CMD --build-arg $arg"
+            done <<< "$BUILD_ARGS"
+          fi
 
-            # Add build args
-            BUILD_ARGS="${{ inputs.build-args }}"
-            if [ -n "$BUILD_ARGS" ]; then
-              while IFS= read -r arg; do
-                [ -n "$arg" ] && BUILD_CMD="$BUILD_CMD --build-arg $arg"
-              done <<< "$BUILD_ARGS"
-            fi
+          BUILD_CMD="$BUILD_CMD ${{ inputs.context }}"
+          eval "$BUILD_CMD"
 
-            BUILD_CMD="$BUILD_CMD ${{ inputs.context }}"
-            eval "$BUILD_CMD"
-          done
+          # Push per-platform image to registry
+          buildah push "${STAGING_TAG}" "docker://${STAGING_TAG}"
 
-          # Create manifest list
-          TAGS="${{ steps.meta.outputs.tags }}"
+  manifest:
+    name: Create & Push Manifest
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to registry
+        run: |
+          USERNAME="${{ secrets.REGISTRY_USERNAME }}"
+          PASSWORD="${{ secrets.REGISTRY_PASSWORD }}"
+          if [ -z "$USERNAME" ]; then USERNAME="${{ github.actor }}"; fi
+          if [ -z "$PASSWORD" ]; then PASSWORD="${{ secrets.GITHUB_TOKEN }}"; fi
+          # Buildah login (for manifest operations)
+          echo "$PASSWORD" | buildah login -u "$USERNAME" --password-stdin "${{ inputs.registry }}"
+          # Docker login (for cosign signature push)
+          echo "$PASSWORD" | docker login -u "$USERNAME" --password-stdin "${{ inputs.registry }}"
+
+      - name: Create and push manifest
+        id: push
+        run: |
+          TAGS="${{ needs.prepare.outputs.tags }}"
           FIRST_TAG=$(echo "$TAGS" | awk '{print $1}')
+          STAGING_TAG="${{ needs.prepare.outputs.staging-tag }}"
+          IMAGE="${{ needs.prepare.outputs.image }}"
 
+          # Parse platforms to get architectures
+          IFS=',' read -ra PLATFORMS <<< "${{ inputs.platforms }}"
+
+          # Create manifest from per-platform registry images
           buildah manifest create "$FIRST_TAG"
           for PLATFORM in "${PLATFORMS[@]}"; do
             PLATFORM=$(echo "$PLATFORM" | xargs)
             ARCH="${PLATFORM##*/}"
-            buildah manifest add "$FIRST_TAG" "containers-storage:${MANIFEST}-${ARCH}"
+            echo "Adding ${STAGING_TAG}-${ARCH} to manifest..."
+            buildah manifest add "$FIRST_TAG" "docker://${STAGING_TAG}-${ARCH}"
           done
 
-          # Push manifest with all tags
+          # Push manifest with first tag and capture digest
+          mkdir -p /tmp/digests
+          echo "Pushing manifest as ${FIRST_TAG}..."
+          buildah manifest push --all --digestfile /tmp/digests/manifest "$FIRST_TAG" "docker://${FIRST_TAG}"
+          DIGEST=$(cat /tmp/digests/manifest)
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "Manifest digest: ${DIGEST}"
+
+          # Push remaining tags
           for TAG in $TAGS; do
-            buildah manifest push --all "$FIRST_TAG" "docker://${TAG}"
+            if [ "$TAG" != "$FIRST_TAG" ]; then
+              echo "Pushing manifest as ${TAG}..."
+              buildah manifest push --all "$FIRST_TAG" "docker://${TAG}"
+            fi
           done
+
+          # Clean up staging tags
+          for PLATFORM in "${PLATFORMS[@]}"; do
+            PLATFORM=$(echo "$PLATFORM" | xargs)
+            ARCH="${PLATFORM##*/}"
+            echo "Note: staging image ${STAGING_TAG}-${ARCH} can be cleaned up from the registry"
+          done
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign container image
+        run: |
+          IMAGE="${{ needs.prepare.outputs.image }}@${{ steps.push.outputs.digest }}"
+          echo "Signing ${IMAGE}..."
+          cosign sign --yes "${IMAGE}"
