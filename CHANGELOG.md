@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/cwaits6/.github/compare/v1.1.0...v1.1.1) (2026-03-16)
+
+
+### Bug Fixes
+
+* **release:** bump setup-go to v6, sbom-action to v0.23.1 ([8adfbdf](https://github.com/cwaits6/.github/commit/8adfbdfd8f5aea63f66ae0d8f250cff35d885bd4))
+
 # [1.1.0](https://github.com/cwaits6/.github/compare/v1.0.0...v1.1.0) (2026-03-16)
 
 
