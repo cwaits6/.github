@@ -1,3 +1,15 @@
+# [1.3.0](https://github.com/cwaits6/.github/compare/v1.2.1...v1.3.0) (2026-03-18)
+
+
+### Bug Fixes
+
+* use env var check for app credentials instead of secrets context ([#3](https://github.com/cwaits6/.github/issues/3)) ([2f46251](https://github.com/cwaits6/.github/commit/2f46251c3e730de758b945f8ed5e1b0ec61d2d49))
+
+
+### Features
+
+* support GitHub App token for triggering downstream workflows ([#2](https://github.com/cwaits6/.github/issues/2)) ([2b1360b](https://github.com/cwaits6/.github/commit/2b1360b800dc67e120d286c122480ec0a37a64df))
+
 ## [1.2.1](https://github.com/cwaits6/.github/compare/v1.2.0...v1.2.1) (2026-03-16)
 
 
