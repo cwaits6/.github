@@ -9,7 +9,8 @@ Shared reusable GitHub Actions workflows for `cwaits6` repos.
 | `dependency-review.yml` | PR dependency change review | `fail-on-severity` |
 | `trivy.yml` | Filesystem vulnerability scan | `severity`, `scan-type` |
 | `release.yml` | Semantic-release + SBOM + Go binary builds | `go-main-package`, `go-ldflags-prefix`, `go-binary-name` |
-| `container-build.yml` | Buildah multi-arch container build & push | `dockerfile`, `platforms`, `build-args` |
+| `container-build.yml` | Buildah multi-arch container build & push | `dockerfile`, `platforms`, `build-args`, `dockerhub-image` |
+| `scorecard.yml` | OpenSSF Scorecard analysis with SARIF upload | `publish-results` |
 | `cleanup-preview.yml` | Vercel preview deployment cleanup | `production-keep-count` |
 | `semgrep.yml` | Static analysis with autofix and PR comments | `semgrep-config` |
 
@@ -83,6 +84,40 @@ jobs:
 ```
 
 Rootless Buildah build, multi-arch manifest, pushes to GHCR by default.
+
+#### With Docker Hub
+
+```yaml
+jobs:
+  build:
+    uses: cwaits6/.github/.github/workflows/container-build.yml@main
+    with:
+      dockerfile: deploy/docker/Dockerfile
+      platforms: linux/amd64,linux/arm64
+      dockerhub-image: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && 'docker.io/user/repo' || '' }}
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+```
+
+Pushes to Docker Hub only on tagged releases. Pass an empty string to skip.
+
+### OpenSSF Scorecard
+
+```yaml
+# .github/workflows/scorecard.yml
+name: Scorecard
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1"
+jobs:
+  scorecard:
+    uses: cwaits6/.github/.github/workflows/scorecard.yml@main
+```
+
+Runs OpenSSF Scorecard, uploads SARIF to the GitHub Security tab, and publishes results to scorecard.dev (enables the badge).
 
 ### Vercel cleanup
 
