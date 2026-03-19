@@ -8,14 +8,13 @@ on:
         type: boolean
         default: true
 
-permissions: read-all
-
 jobs:
   scorecard:
     permissions:
       contents: read
       security-events: write
       id-token: write
+      actions: read
     name: Scorecard Analysis
     runs-on: ubuntu-latest
     steps:
