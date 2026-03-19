@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/cwaits6/.github/compare/v1.3.0...v1.4.0) (2026-03-19)
+
+
+### Features
+
+* add optional Docker Hub publishing to container build workflow ([#4](https://github.com/cwaits6/.github/issues/4)) ([ac16452](https://github.com/cwaits6/.github/commit/ac164521e1ae6ca88b4a4de43c93cd2709763d61))
+
 # [1.3.0](https://github.com/cwaits6/.github/compare/v1.2.1...v1.3.0) (2026-03-18)
 
 
