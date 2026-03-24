@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/cwaits6/.github/compare/v1.5.2...v1.6.0) (2026-03-24)
+
+
+### Features
+
+* remove Go build steps from release workflow ([#9](https://github.com/cwaits6/.github/issues/9)) ([ecb699d](https://github.com/cwaits6/.github/commit/ecb699df270990be809b39bfcb8b9c08b786ff88))
+
 ## [1.5.2](https://github.com/cwaits6/.github/compare/v1.5.1...v1.5.2) (2026-03-19)
 
 
