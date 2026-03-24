@@ -27,7 +27,9 @@ jobs:
         uses: astral-sh/setup-uv@v7
 
       - name: Run Semgrep
-        run: uvx semgrep scan --config=${{ inputs.semgrep-config }} --autofix --json --output=semgrep-results.json
+        env:
+          SEMGREP_CONFIG: ${{ inputs.semgrep-config }}
+        run: uvx semgrep scan --config="$SEMGREP_CONFIG" --autofix --json --output=semgrep-results.json
         continue-on-error: true
 
       # ── PR branch flow ────────────────────────────────────────────────────
@@ -51,6 +53,7 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           BODY=$(uv run python3 - <<'PYEOF'
           import json, sys
@@ -73,7 +76,7 @@ jobs:
             echo "No manual findings."
             exit 0
           fi
-          gh pr comment ${{ github.event.pull_request.number }} --body "$BODY"
+          gh pr comment "$PR_NUMBER" --body "$BODY"
 
       - name: Fail on findings
         if: github.event_name == 'pull_request'
