@@ -1,3 +1,13 @@
+## [1.6.1](https://github.com/cwaits6/.github/compare/v1.6.0...v1.6.1) (2026-03-24)
+
+
+### Bug Fixes
+
+* grant semgrep required permissions in pr.yml ([4640192](https://github.com/cwaits6/.github/commit/46401924479c0acae9bd0b493b10535581ef8dd5))
+* pin all actions to SHA commits and suppress Node.js 20 warnings ([635eac4](https://github.com/cwaits6/.github/commit/635eac485bd1a7787cf4dec53737faf1673016fe))
+* remove skip ci from semantic-release commit message ([a53b2b0](https://github.com/cwaits6/.github/commit/a53b2b0e96f23614a13effbe4232b3cbac8494b2))
+* use env vars instead of direct interpolation in run steps ([5a57340](https://github.com/cwaits6/.github/commit/5a573404aacc399c0488f0bdd0e9d26b03b36ecf))
+
 # [1.6.0](https://github.com/cwaits6/.github/compare/v1.5.2...v1.6.0) (2026-03-24)
 
 
