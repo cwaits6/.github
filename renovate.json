@@ -1,25 +1,4 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
-  "labels": ["dependencies"],
-  "commitMessagePrefix": "chore(deps):",
-  "minimumReleaseAge": "3 days",
-  "automergeType": "pr",
-  "minor": {
-    "automerge": true
-  },
-  "patch": {
-    "automerge": true
-  },
-  "packageRules": [
-    {
-      "matchManagers": ["github-actions"],
-      "automerge": true
-    },
-    {
-      "description": "Skip quarantine for vulnerability remediation PRs",
-      "matchUpdateTypes": ["vulnerability"],
-      "minimumReleaseAge": "0 seconds"
-    }
-  ]
+  "extends": ["github>krypsis-io/renovate-config"]
 }
