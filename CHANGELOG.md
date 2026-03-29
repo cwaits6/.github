@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/krypsis-io/.github/compare/v1.7.0...v1.8.0) (2026-03-29)
+
+
+### Features
+
+* add upstream sync workflow for private mirrors ([#18](https://github.com/krypsis-io/.github/issues/18)) ([560080b](https://github.com/krypsis-io/.github/commit/560080bccaf2b41490bf714ff6ce01946a73f290))
+
 # [1.7.0](https://github.com/krypsis-io/.github/compare/v1.6.3...v1.7.0) (2026-03-29)
 
 
