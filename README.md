@@ -17,6 +17,7 @@ All actions are SHA-pinned. Shell injection mitigations applied (env vars instea
 | `semgrep.yml` | Static analysis with autofix and PR comments | `semgrep-config` |
 | `scorecard.yml` | OpenSSF Scorecard analysis with SARIF upload | `publish-results` |
 | `cleanup-preview.yml` | Vercel preview deployment cleanup | `production-keep-count` |
+| `renovate.yml` | Self-hosted Renovate dependency updates | `dry-run`, `log-level` |
 | `sync-upstream.yml` | Auto-sync private mirrors from upstream | _(schedule/manual)_ |
 
 ## Usage
@@ -197,6 +198,44 @@ jobs:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 ```
 
+### Renovate (self-hosted)
+
+For orgs that prefer not to use the public Renovate GitHub App (e.g., to avoid private repo access by third parties), this workflow runs Renovate entirely within your own GitHub Actions runner.
+
+```yaml
+# .github/workflows/renovate.yml
+name: Renovate
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+jobs:
+  renovate:
+    uses: krypsis-io/.github/.github/workflows/renovate.yml@main
+    secrets: inherit
+```
+
+**How it works:**
+
+- When run from a `.github` repo, Renovate autodiscovers all repos in the org (excluding `.github` itself)
+- When called from a single repo, it scans only that repo
+- Repos without a Renovate config receive an onboarding PR
+- Skipped in `krypsis-io/.github` — only activates in downstream orgs
+
+**GitHub App permissions required:**
+
+The app referenced by `APP_ID` / `APP_PRIVATE_KEY` must have these **repository permissions**:
+
+| Permission | Access | Why |
+|------------|--------|-----|
+| Contents | Read & Write | Read dependency files, create update branches |
+| Pull requests | Read & Write | Open and manage dependency update PRs |
+| Issues | Read & Write | Onboarding issues and dependency notices |
+| Checks | Read | Read CI status before automerging |
+| Metadata | Read | Repository discovery (always granted) |
+
+The app must be installed on every repo Renovate should manage.
+
 ### Upstream sync (private mirrors)
 
 The `sync-upstream.yml` workflow automatically keeps private mirrors in sync with this repo. It runs weekly (Mondays at 6am UTC) and supports manual trigger.
@@ -235,7 +274,7 @@ jobs:
     uses: your-org/.github/.github/workflows/release.yml@main
 ```
 
-The sync workflow requires a GitHub App installed on your org with **Contents** and **Workflows** write permissions. Add the app credentials as repo secrets:
+The sync and Renovate workflows require a GitHub App installed on your org. At minimum it needs **Contents** and **Workflows** write permissions (sync), plus **Pull requests**, **Issues**, and **Checks** read permissions (Renovate). Add the app credentials as repo secrets:
 
 - `APP_ID` — the GitHub App's Client ID
 - `APP_PRIVATE_KEY` — the GitHub App's private key (`.pem` file contents)
