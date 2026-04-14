@@ -1,3 +1,10 @@
+## [1.8.2](https://github.com/krypsis-io/.github/compare/v1.8.1...v1.8.2) (2026-04-14)
+
+
+### Bug Fixes
+
+* **sync:** allow sync upstream workflow to write permissions ([#31](https://github.com/krypsis-io/.github/issues/31)) ([bfc4686](https://github.com/krypsis-io/.github/commit/bfc4686e487a3d388b4ef7dc9096e41e939e6089))
+
 ## [1.8.1](https://github.com/krypsis-io/.github/compare/v1.8.0...v1.8.1) (2026-03-29)
 
 
